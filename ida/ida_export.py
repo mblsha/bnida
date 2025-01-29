@@ -2,13 +2,15 @@
 Exports analysis data from IDA to a bnida json file
 """
 
-import ida_struct
 import ida_kernwin
 import ida_segment
 import ida_bytes
 import idautils
 import ida_funcs
 import idaapi
+import ida_typeinf
+import ida_idaapi
+import idc
 import json
 from collections import OrderedDict
 
@@ -97,11 +99,28 @@ def get_sections():
 
     return sections
 
+def get_member(tif, offset):
+    if not tif.is_struct():
+        return None
+
+    udm = ida_typeinf.udm_t()
+    udm.offset = offset * 8
+    idx = tif.find_udm(udm, ida_typeinf.STRMEM_OFFSET)
+    if idx != -1:
+        return udm
+
+    return None
+
+def get_member_tinfo(tif, udm):
+    if tif and udm:
+        ida_typeinf.copy_tinfo_t(tif, udm.type)
+        return True
+    return False
 
 def get_member_type(struct, idx):
-    member = ida_struct.get_member(struct, idx)
     tif = idaapi.tinfo_t()
-    ida_struct.get_member_tinfo(tif, member)
+    member = get_member(tif, idx)
+    get_member_tinfo(tif, member)
     elements = str(tif).split(' ')
     typ = None
     if len(elements) == 2 and elements[0] == 'unsigned':
@@ -145,13 +164,19 @@ def get_struct_members(struct, sid):
 
     return members
 
+def get_struc(struct_tid):
+    tif = ida_typeinf.tinfo_t()
+    if tif.get_type_by_tid(struct_tid):
+        if tif.is_struct():
+            return tif
+    return ida_idaapi.BADADDR
 
 def get_structs():
     structs = OrderedDict()
     for idx, sid, name in idautils.Structs():
-        struct = ida_struct.get_struc(sid)
+        struct = get_struc(sid)
         structs[name] = {}
-        structs[name]['size'] = ida_struct.get_struc_size(struct)
+        structs[name]['size'] = idc.get_struc_size(sid)
         structs[name]['members'] = get_struct_members(struct, sid)
 
     return structs

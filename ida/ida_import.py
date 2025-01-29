@@ -7,9 +7,10 @@ import idautils
 import ida_kernwin
 import idaapi
 import ida_segment
-import ida_struct
 import ida_bytes
 import ida_funcs
+import ida_typeinf
+import ida_idaapi
 import json
 
 
@@ -82,6 +83,8 @@ def import_function_comments(comments, sections):
 def import_line_comments(comments, sections):
     for addr, comment in comments.items():
         addr = adjust_addr(sections, int(addr))
+        if addr is None:
+            continue
         ida_bytes.set_cmt(addr, comment, 0)
 
 
@@ -95,20 +98,27 @@ def import_names(names, sections):
             # Invalid characters are silently sanitized with `_` here.
             idc.set_name(addr, name, idc.SN_NOCHECK)
 
+def get_struc(struct_tid):
+    tif = ida_typeinf.tinfo_t()
+    if tif.get_type_by_tid(struct_tid):
+        if tif.is_struct():
+            return tif
+    return ida_idaapi.BADADDR
 
 def import_structures(structures):
-    curr_idx = ida_struct.get_last_struc_idx() + 1
+    # curr_idx = ida_struct.get_last_struc_idx() + 1
+    curr_idx = -1 # add_struc ignores index in ida 9
     for struct_name, struct_info in structures.items():
         # Create structure
-        tid = ida_struct.add_struc(curr_idx, struct_name)
+        tid = idc.add_struc(curr_idx, struct_name, False)
 
-        # Get struct object and add members
-        struct = ida_struct.get_struc(tid)
+        # Add members
+        # struct = get_struc(tid)
         for member_name, member_info in struct_info['members'].items():
             flag = get_flag_from_type(member_info['type'])
-            ida_struct.add_struc_member(struct, member_name,
-                                        member_info['offset'], flag, None,
-                                        member_info['size'])
+            idc.add_struc_member(tid, member_name,
+                                    member_info['offset'], flag, -1,
+                                    member_info['size'])
 
         curr_idx += 1
 
@@ -143,4 +153,4 @@ def main(json_file):
 
 
 if __name__ == '__main__':
-    main(ida_kernwin.ask_file(1, '*.json', 'Import file name'))
+    main(ida_kernwin.ask_file(0, '*.json', 'Import file name'))

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from binja.binja_import import ImportInBackground
 
 
@@ -30,7 +32,7 @@ class _BV:
     def __init__(self, sections: dict[str, _Section]) -> None:
         self._sections = sections
         self._functions: dict[int, _Function] = {}
-        self._symbols: list[object] = []
+        self._symbols: list[Any] = []
         self._defined_types: dict[str, object] = {}
         self._parsed_types: list[str] = []
         self._added_functions: list[int] = []

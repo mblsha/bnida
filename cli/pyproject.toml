@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bnida-cli"
+version = "0.1.0"
+description = "CLI for bnida JSON files."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+bnida-cli = "bnida_cli.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bnida_cli"]
+
+[tool.uv]
+package = true

@@ -18,7 +18,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "cli/tests"]
 
 [tool.uv]
 package = false

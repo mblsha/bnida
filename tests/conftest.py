@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import sys
 
+# Pytest autoloads this module during test collection.
+
 
 def _running_inside_binary_ninja() -> bool:
     try:

@@ -15,6 +15,7 @@
 - Optional syntax check: `python -m py_compile binja/*.py ida/*.py`.
 - Unit tests: `uv run pytest`.
 - Linting: `uv run ruff check .`.
+- Type checking: `uv run ty check`.
 
 ## Coding Style & Naming Conventions
 - Python 3, 4-space indentation, and PEP 8-ish formatting.

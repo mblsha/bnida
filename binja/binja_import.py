@@ -8,6 +8,8 @@ from binaryninja import (OpenFileNameField, get_form_input,
                          BackgroundTaskThread, types, Type, SymbolType, Symbol,
                          Architecture, log_info, log_error, log_warn)
 
+task = None
+
 
 class GetOptions(object):
     """

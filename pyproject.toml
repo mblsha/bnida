@@ -15,6 +15,7 @@ dev = [
   "binja-test-mocks>=0.1.11",
   "pytest>=7.0.0",
   "ruff>=0.1.0",
+  "ty>=0.0.1",
 ]
 
 [tool.pytest.ini_options]
@@ -37,3 +38,15 @@ ignore = [
   "F405",  # names from star imports (legacy plugin layout)
   "F811",  # redefinition from imports (legacy code)
 ]
+
+[tool.ty.src]
+include = ["__init__.py", "binja", "ida", "tests", "cli/src", "cli/tests"]
+
+[tool.ty.environment]
+root = [".", "./cli/src"]
+
+[[tool.ty.overrides]]
+include = ["__init__.py", "binja/**", "ida/**", "tests/**"]
+
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"

@@ -7,6 +7,8 @@ from binaryninja import (SaveFileNameField, get_form_input,
                          BackgroundTaskThread, types, log_debug, log_info)
 from collections import OrderedDict
 
+task = None
+
 
 class GetOptions(object):
     """

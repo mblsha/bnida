@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 
 from bnida_cli.__main__ import main
+from bnida_cli.schema import BnidaData
 
 
-def _write_bnida(path: Path, payload: dict[str, object]) -> None:
+def _write_bnida(path: Path, payload: BnidaData) -> None:
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=4)
 
@@ -16,9 +17,9 @@ def test_query_context_json(tmp_path, capsys) -> None:
     _write_bnida(
         bnida_path,
         {
-            "names": {"4096": "start", "4112": "mid"},
+            "names": {4096: "start", 4112: "mid"},
             "functions": [4096],
-            "line_comments": {"4128": "note"},
+            "line_comments": {4128: "note"},
             "func_comments": {},
             "sections": {},
             "structs": {},

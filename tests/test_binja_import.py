@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol
+
+from binaryninja import SymbolType
 
 from binja.binja_import import ImportInBackground
 
@@ -28,11 +30,15 @@ class _Function:
         self._comments[addr] = comment
 
 
+class _SymbolLike(Protocol):
+    type: SymbolType
+
+
 class _BV:
     def __init__(self, sections: dict[str, _Section]) -> None:
         self._sections = sections
         self._functions: dict[int, _Function] = {}
-        self._symbols: list[Any] = []
+        self._symbols: list[_SymbolLike] = []
         self._defined_types: dict[str, object] = {}
         self._parsed_types: list[str] = []
         self._added_functions: list[int] = []
@@ -54,7 +60,7 @@ class _BV:
     def set_comment_at(self, addr: int, comment: str) -> None:
         self._functions.setdefault(addr, _Function(addr)).set_comment_at(addr, comment)
 
-    def define_user_symbol(self, symbol: object) -> None:
+    def define_user_symbol(self, symbol: _SymbolLike) -> None:
         self._symbols.append(symbol)
 
     def parse_type_string(self, type_string: str) -> tuple[object, None]:

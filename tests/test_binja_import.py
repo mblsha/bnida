@@ -45,9 +45,9 @@ class _BV:
         self._functions[addr] = _Function(addr)
         self._added_functions.append(addr)
 
-    def get_functions_containing(self, addr: int) -> list[_Function]:
+    def get_functions_containing(self, addr: int) -> list[_Function] | None:
         funcs = [func for func in self._functions.values() if func.start <= addr]
-        return funcs
+        return funcs or None
 
     def set_comment_at(self, addr: int, comment: str) -> None:
         self._functions.setdefault(addr, _Function(addr)).set_comment_at(addr, comment)
@@ -128,3 +128,22 @@ def test_import_structures_parses_members() -> None:
     assert "uint8_t [4]" in bv._parsed_types
     assert "TestStruct" in bv._defined_types
     assert isinstance(bv._defined_types["TestStruct"], bn.types.Type)
+
+
+def test_adjust_addr_missing_section_returns_none() -> None:
+    sections = {".text": {"start": 0x1000, "end": 0x1FFF}}
+    bv = _BV({".data": _Section(start=0x2000, end=0x2FFF)})
+    importer = _importer(bv)
+
+    assert importer.adjust_addr(sections, 0x1100) is None
+
+
+def test_import_line_comments_without_function_uses_bv_comment() -> None:
+    sections = {".text": {"start": 0x1000, "end": 0x1FFF}}
+    bv = _BV({".text": _Section(start=0x4000, end=0x4FFF)})
+    importer = _importer(bv)
+
+    importer.import_line_comments({"4096": "line comment"}, sections)
+
+    func = bv._functions[0x4000]
+    assert func.get_comment_at(0x4000) == "line comment"

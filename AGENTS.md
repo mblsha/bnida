@@ -14,6 +14,7 @@
   - IDA: run `ida_export.py`/`ida_import.py` via `Alt+F7` or install them in the plugins directory.
 - Optional syntax check: `python -m py_compile binja/*.py ida/*.py`.
 - Unit tests: `uv run pytest`.
+- Linting: `uv run ruff check .`.
 
 ## Coding Style & Naming Conventions
 - Python 3, 4-space indentation, and PEP 8-ish formatting.

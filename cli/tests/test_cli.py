@@ -40,6 +40,39 @@ def test_query_context_json(tmp_path, capsys) -> None:
     assert payload["current"] == {"address": "0x1018"}
 
 
+def test_query_three_functions_with_comments_json(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [4096, 4112, 4128],
+            "line_comments": {4096: "first", 4112: "second", 4128: "third"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "query", "0x1010", "--json"])
+    assert exit_code == 0
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["address"] == "0x1010"
+    assert payload["before"] == [
+        {"address": "0x1000", "function": True, "line_comment": "first"}
+    ]
+    assert payload["current"] == {
+        "address": "0x1010",
+        "function": True,
+        "line_comment": "second",
+    }
+    assert payload["after"] == [
+        {"address": "0x1020", "function": True, "line_comment": "third"}
+    ]
+
+
 def test_add_function_updates_names(tmp_path) -> None:
     bnida_path = tmp_path / "bnida.json"
     _write_bnida(

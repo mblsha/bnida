@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from bisect import bisect_left
 from collections import OrderedDict
 from pathlib import Path
@@ -15,6 +16,18 @@ from bnida_cli.schema import (
 )
 
 EntryJson = dict[str, str | bool]
+
+
+class CliError(ValueError):
+    pass
+
+
+class OverwriteError(CliError):
+    pass
+
+
+class MissingEntryError(CliError):
+    pass
 
 
 def parse_address(value: str) -> int:
@@ -127,6 +140,8 @@ def render_human(result: QueryResult) -> str:
 
 
 def add_function(doc: BnidaDocument, address: int, name: str) -> None:
+    ensure_name_nonempty(name)
+    ensure_name_available(doc, address, name)
     functions = set(doc.data["functions"])
     functions.add(address)
     doc.data["functions"] = sorted(functions)
@@ -134,10 +149,68 @@ def add_function(doc: BnidaDocument, address: int, name: str) -> None:
 
 
 def add_variable(doc: BnidaDocument, address: int, name: str) -> None:
+    ensure_name_nonempty(name)
+    ensure_name_available(doc, address, name)
     doc.data["names"][address] = name
 
 
 def add_comment(doc: BnidaDocument, address: int, comment: str) -> None:
+    ensure_comment_available(doc, address, comment)
+    doc.data["line_comments"][address] = comment
+
+
+def ensure_name_available(doc: BnidaDocument, address: int, name: str) -> None:
+    existing = doc.data["names"].get(address)
+    if existing is not None and existing != name:
+        raise OverwriteError(
+            f"name already set at {format_address(address)}: {existing!r}; "
+            "use rename-name to change it"
+        )
+
+
+def ensure_name_nonempty(name: str) -> None:
+    if name == "":
+        raise CliError("name must be non-empty")
+
+
+def ensure_comment_available(doc: BnidaDocument, address: int, comment: str) -> None:
+    existing = doc.data["line_comments"].get(address)
+    if existing is not None and existing != comment:
+        raise OverwriteError(
+            f"line comment already set at {format_address(address)}: {existing!r}; "
+            "use rename-comment to change it"
+        )
+
+
+def ensure_name_exists(doc: BnidaDocument, address: int) -> None:
+    if address not in doc.data["names"]:
+        raise MissingEntryError(
+            f"name not set at {format_address(address)}; "
+            "use add-function or add-variable to create it"
+        )
+
+
+def ensure_comment_exists(doc: BnidaDocument, address: int) -> None:
+    if address not in doc.data["line_comments"]:
+        raise MissingEntryError(
+            f"line comment not set at {format_address(address)}; "
+            "use add-comment to create it"
+        )
+
+
+def rename_name(doc: BnidaDocument, address: int, name: str) -> None:
+    ensure_name_exists(doc, address)
+    if name == "":
+        del doc.data["names"][address]
+        return
+    doc.data["names"][address] = name
+
+
+def rename_comment(doc: BnidaDocument, address: int, comment: str) -> None:
+    ensure_comment_exists(doc, address)
+    if comment == "":
+        del doc.data["line_comments"][address]
+        return
     doc.data["line_comments"][address] = comment
 
 
@@ -172,6 +245,22 @@ def build_parser() -> argparse.ArgumentParser:
     add_cmt.add_argument("address", type=parse_address, help="Address (hex or decimal).")
     add_cmt.add_argument("comment", help="Comment text.")
 
+    rename_name_cmd = subparsers.add_parser(
+        "rename-name", help="Update an existing symbol name."
+    )
+    rename_name_cmd.add_argument(
+        "address", type=parse_address, help="Address (hex or decimal)."
+    )
+    rename_name_cmd.add_argument("name", help="Symbol name.")
+
+    rename_comment_cmd = subparsers.add_parser(
+        "rename-comment", help="Update an existing line comment."
+    )
+    rename_comment_cmd.add_argument(
+        "address", type=parse_address, help="Address (hex or decimal)."
+    )
+    rename_comment_cmd.add_argument("comment", help="Comment text.")
+
     return parser
 
 
@@ -200,14 +289,22 @@ def main(argv: list[str] | None = None) -> int:
 
     doc = load_bnida(args.path)
 
-    if args.command == "add-function":
-        add_function(doc, args.address, args.name)
-    elif args.command == "add-variable":
-        add_variable(doc, args.address, args.name)
-    elif args.command == "add-comment":
-        add_comment(doc, args.address, args.comment)
-    else:
-        parser.error("Unknown command")
+    try:
+        if args.command == "add-function":
+            add_function(doc, args.address, args.name)
+        elif args.command == "add-variable":
+            add_variable(doc, args.address, args.name)
+        elif args.command == "add-comment":
+            add_comment(doc, args.address, args.comment)
+        elif args.command == "rename-name":
+            rename_name(doc, args.address, args.name)
+        elif args.command == "rename-comment":
+            rename_comment(doc, args.address, args.comment)
+        else:
+            parser.error("Unknown command")
+    except CliError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     write_bnida(args.path, doc)
     return 0

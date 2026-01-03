@@ -62,3 +62,371 @@ def test_add_function_updates_names(tmp_path) -> None:
 
     assert payload["functions"] == [8192]
     assert payload["names"]["8192"] == "entrypoint"
+
+
+def test_add_function_rejects_overwrite(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {8192: "entrypoint"},
+            "functions": [8192],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-function", "0x2000", "other"])
+    assert exit_code == 1
+    assert "rename-name" in capsys.readouterr().err
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"]["8192"] == "entrypoint"
+    assert payload["functions"] == [8192]
+
+
+def test_add_function_rejects_empty_name(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-function", "0x2000", ""])
+    assert exit_code == 1
+    assert "name must be non-empty" in capsys.readouterr().err
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"] == {}
+    assert payload["functions"] == []
+
+
+def test_add_variable_rejects_overwrite(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {12288: "old_name"},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-variable", "0x3000", "new_name"])
+    assert exit_code == 1
+    assert "rename-name" in capsys.readouterr().err
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"]["12288"] == "old_name"
+
+
+def test_add_variable_rejects_empty_name(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-variable", "0x3000", ""])
+    assert exit_code == 1
+    assert "name must be non-empty" in capsys.readouterr().err
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"] == {}
+
+
+def test_add_comment_rejects_overwrite(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {16384: "first"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-comment", "0x4000", "second"])
+    assert exit_code == 1
+    assert "rename-comment" in capsys.readouterr().err
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["line_comments"]["16384"] == "first"
+
+
+def test_add_function_allows_idempotent_write(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {8192: "entrypoint"},
+            "functions": [8192],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-function", "0x2000", "entrypoint"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["functions"] == [8192]
+    assert payload["names"]["8192"] == "entrypoint"
+
+
+def test_add_variable_allows_idempotent_write(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {12288: "var"},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-variable", "0x3000", "var"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"]["12288"] == "var"
+
+
+def test_add_comment_allows_idempotent_write(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {16384: "note"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "add-comment", "0x4000", "note"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["line_comments"]["16384"] == "note"
+
+
+def test_rename_name_updates_entry(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {4096: "old"},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-name", "0x1000", "new"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"]["4096"] == "new"
+
+
+def test_rename_name_allows_idempotent_write(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {4096: "same"},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-name", "0x1000", "same"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"]["4096"] == "same"
+
+
+def test_rename_name_removes_entry_for_empty_value(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {4096: "old"},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-name", "0x1000", ""])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["names"] == {}
+
+
+def test_rename_name_requires_existing(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-name", "0x1000", "new"])
+    assert exit_code == 1
+    assert "add-function or add-variable" in capsys.readouterr().err
+
+
+def test_rename_comment_updates_entry(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {4096: "old"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-comment", "0x1000", "new"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["line_comments"]["4096"] == "new"
+
+
+def test_rename_comment_allows_idempotent_write(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {4096: "same"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-comment", "0x1000", "same"])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["line_comments"]["4096"] == "same"
+
+
+def test_rename_comment_removes_entry_for_empty_value(tmp_path) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {4096: "old"},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-comment", "0x1000", ""])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["line_comments"] == {}
+
+
+def test_rename_comment_requires_existing(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    exit_code = main([str(bnida_path), "rename-comment", "0x1000", "new"])
+    assert exit_code == 1
+    assert "add-comment" in capsys.readouterr().err

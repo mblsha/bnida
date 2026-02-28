@@ -21,6 +21,30 @@ The CLI lives in `cli/` and works directly with the same bnida JSON format.
 uv --directory cli run bnida-cli --help
 ```
 
+## Function Signature Name Convention
+
+`bnida` stores names as plain strings in the `names` map. A common convention is to
+encode function signatures directly in those strings, including return type and
+register-annotated parameters.
+
+Example (`type name @ reg` parameter form):
+
+```json
+{
+  "names": {
+    "1193046": "s32 scene_switch_to_map_area_slot(u16 slot_index @ ax, u16 actor_id @ dx)",
+    "1193100": "void* alloc_render_node(u16 list_state @ cx)",
+    "1193200": "void title_tick(void)"
+  },
+  "functions": [1193046, 1193100, 1193200]
+}
+```
+
+Notes:
+- `bnida` does not enforce signature grammar in `names`; it preserves strings as-is.
+- Parsing and application of these type strings is consumer-specific (for example,
+  downstream importers or tooling that chooses to interpret the signature text).
+
 ## License
 
 MIT

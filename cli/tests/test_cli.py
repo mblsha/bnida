@@ -141,6 +141,35 @@ def test_add_function_updates_names(tmp_path) -> None:
     assert payload["names"]["8192"] == "entrypoint"
 
 
+def test_add_function_keeps_register_annotated_signature_name(tmp_path, capsys) -> None:
+    bnida_path = tmp_path / "bnida.json"
+    _write_bnida(
+        bnida_path,
+        {
+            "names": {},
+            "functions": [],
+            "line_comments": {},
+            "func_comments": {},
+            "sections": {},
+            "structs": {},
+        },
+    )
+
+    signature = "s32 scene_switch_to_map_area_slot(u16 slot_index @ ax, u16 actor_id @ dx)"
+    exit_code = main([str(bnida_path), "add-function", "0x2000", signature])
+    assert exit_code == 0
+
+    with bnida_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    assert payload["names"]["8192"] == signature
+    assert payload["functions"] == [8192]
+
+    query_exit = main([str(bnida_path), "query", "0x2000", "--json"])
+    assert query_exit == 0
+    query_payload = json.loads(capsys.readouterr().out)
+    assert query_payload["current"]["name"] == signature
+
+
 def test_add_function_rejects_overwrite(tmp_path, capsys) -> None:
     bnida_path = tmp_path / "bnida.json"
     _write_bnida(

@@ -1,0 +1,12 @@
+version = 1
+revision = 3
+requires-python = ">=3.11"
+
+[options]
+exclude-newer = "2026-03-30T23:06:17.31822Z"
+exclude-newer-span = "P7D"
+
+[[package]]
+name = "bnida-cli"
+version = "0.1.0"
+source = { editable = "." }
